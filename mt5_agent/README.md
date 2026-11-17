@@ -6,7 +6,7 @@ filtre le spread, et peut exécuter avec un risque fixe en % et SL/TP basés sur
 
 ## Lancer
 ```
-pip install MetaTrader5 pandas      # Windows, terminal MT5 ouvert et connecté
+pip install MetaTrader5 pandas requests  # Windows, terminal MT5 ouvert et connecté
 python agent.py
 ```
 `LIVE_TRADING = False` par défaut : signaux seulement. Testez sur compte **démo** avant tout.
@@ -26,3 +26,12 @@ Risque 1 %/trade, 3 positions max, 1 par symbole, arrêt à -3 % journalier, fil
 | [psyb0t/mt5-httpapi](https://github.com/psyb0t/mt5-httpapi) | 31 | MT5 en VM Docker via REST/MCP (Linux) |
 
 ⚠️ Aucun système ne garantit de gains ; le trading à effet de levier peut faire perdre plus que la mise.
+
+## Pilotage depuis le téléphone (Telegram)
+1. Sur Telegram, écrivez à **@BotFather** → `/newbot` → copiez la clé dans `TELEGRAM_TOKEN`.
+2. Écrivez à **@userinfobot** pour obtenir votre id → `TELEGRAM_CHAT_ID`.
+3. Lancez `python agent.py` sur le VPS Windows, puis envoyez `/status` à votre bot.
+
+Commandes : `/start` `/stop` `/live on` `/live off` `/status` `/quit`.
+Notifications automatiques : opportunités ★ (max 1/h par signal) et chaque ordre exécuté.
+Seul votre chat id est obéi ; les autres messages sont ignorés.

@@ -5,6 +5,10 @@ import pandas as pd
 import MetaTrader5 as mt5
 import config as C
 from strategy import score
+from telegram_bot import Telegram
+
+STATE = {"running": True, "live": C.LIVE_TRADING, "quit": False}
+TG = None
 
 TF = {"M5": mt5.TIMEFRAME_M5, "M15": mt5.TIMEFRAME_M15, "H1": mt5.TIMEFRAME_H1, "H4": mt5.TIMEFRAME_H4}
 
@@ -35,7 +39,9 @@ def place(sym, direction, a):
                price=price, sl=sl, tp=tp, deviation=10, magic=C.MAGIC, comment="mt5_agent",
                type_time=mt5.ORDER_TIME_GTC, type_filling=mt5.ORDER_FILLING_IOC)
     res = mt5.order_send(req)
-    print("  ->", "OK" if res and res.retcode == mt5.TRADE_RETCODE_DONE else f"ÉCHEC {res}")
+    ok = res and res.retcode == mt5.TRADE_RETCODE_DONE
+    msg = f"{'✅' if ok else '❌'} {direction} {sym} {req['volume']} lots @ {price:.5f} SL {sl:.5f} TP {tp:.5f}" + ("" if ok else f" ({res})")
+    print("  ->", msg); TG.send(msg)
 
 def scan():
     opps = []
@@ -49,22 +55,40 @@ def scan():
         opps.append((pts, sym, direction, a, why))
     return sorted(opps, reverse=True)
 
+def status():
+    acc = mt5.account_info()
+    pos = [p for p in (mt5.positions_get() or []) if p.magic == C.MAGIC]
+    lines = [f"{'▶️ actif' if STATE['running'] else '⏸ pause'} | {'RÉEL' if STATE['live'] else 'signaux'}",
+             f"Solde {acc.balance:.2f} | Équité {acc.equity:.2f} {acc.currency}"]
+    lines += [f"• {p.symbol} {'BUY' if p.type == 0 else 'SELL'} {p.volume} : {p.profit:+.2f}" for p in pos] or ["Aucune position"]
+    return "\n".join(lines)
+
 def main():
+    global TG
     if not mt5.initialize(): raise SystemExit(f"MT5 init échouée: {mt5.last_error()}")
-    print(f"Connecté: {mt5.account_info().login} | LIVE={C.LIVE_TRADING}")
+    TG = Telegram(STATE, status); TG.start()
+    print(f"Connecté: {mt5.account_info().login} | LIVE={STATE['live']}")
+    TG.send("🤖 Agent MT5 en ligne\n" + status())
+    alerted = {}
     try:
-        while True:
+        while not STATE["quit"]:
+            if not STATE["running"]: time.sleep(2); continue
             print(f"\n[{dt.datetime.now():%H:%M:%S}] Scan")
             mine = [p for p in (mt5.positions_get() or []) if p.magic == C.MAGIC]
             for pts, sym, d, a, why in scan():
                 flag = "★" if pts >= C.MIN_SCORE else " "
                 print(f"{flag} {sym:7} {d:4} score={pts:3}  {', '.join(why)}")
-                if (pts >= C.MIN_SCORE and C.LIVE_TRADING and len(mine) < C.MAX_OPEN_POSITIONS
+                if pts < C.MIN_SCORE: continue
+                if time.time() - alerted.get((sym, d), 0) > 3600:  # 1 alerte/h par signal
+                    alerted[(sym, d)] = time.time(); TG.send(f"★ {sym} {d} score {pts}\n" + ", ".join(why))
+                if (STATE["live"] and len(mine) < C.MAX_OPEN_POSITIONS
                         and sym not in {p.symbol for p in mine} and daily_pnl_ok()):
                     place(sym, d, a); mine = [p for p in (mt5.positions_get() or []) if p.magic == C.MAGIC]
-            time.sleep(C.SCAN_INTERVAL_SEC)
+            for _ in range(C.SCAN_INTERVAL_SEC):
+                if STATE["quit"]: break
+                time.sleep(1)
     finally:
-        mt5.shutdown()
+        TG.send("⏹ Agent arrêté"); mt5.shutdown()
 
 if __name__ == "__main__":
     main()

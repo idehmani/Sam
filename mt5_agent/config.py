@@ -9,3 +9,6 @@ MAX_OPEN_POSITIONS = 3
 DAILY_LOSS_LIMIT = 0.03   # stop trading si -3 % sur la journée
 LIVE_TRADING = False      # False = mode signal uniquement (recommandé d'abord en démo)
 MAGIC = 260117
+# Telegram (créer le bot via @BotFather ; chat id via @userinfobot)
+TELEGRAM_TOKEN = ""       # ex: "123456:ABC..."  — ne jamais committer la vraie clé
+TELEGRAM_CHAT_ID = ""     # seul ce chat peut piloter l'agent

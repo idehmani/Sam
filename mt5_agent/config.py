@@ -12,3 +12,5 @@ MAGIC = 260117
 # Telegram (créer le bot via @BotFather ; chat id via @userinfobot)
 TELEGRAM_TOKEN = ""       # ex: "123456:ABC..."  — ne jamais committer la vraie clé
 TELEGRAM_CHAT_ID = ""     # seul ce chat peut piloter l'agent
+# Chemin du terminal MT5 (laisser "" pour auto). Ex: r"C:\Program Files\MetaTrader 5\terminal64.exe"
+MT5_PATH = ""

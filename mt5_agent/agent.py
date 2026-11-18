@@ -65,7 +65,13 @@ def status():
 
 def main():
     global TG
-    if not mt5.initialize(): raise SystemExit(f"MT5 init échouée: {mt5.last_error()}")
+    for attempt in range(5):
+        ok = mt5.initialize(path=C.MT5_PATH, timeout=60000) if C.MT5_PATH else mt5.initialize(timeout=60000)
+        if ok: break
+        print(f"MT5 init échouée ({attempt + 1}/5): {mt5.last_error()} — nouvel essai dans 5 s"); time.sleep(5)
+    else:
+        raise SystemExit("Impossible de joindre MT5 : ouvrez le terminal, connectez le compte, "
+                         "et lancez PowerShell SANS mode administrateur (ou renseignez MT5_PATH dans config.py).")
     TG = Telegram(STATE, status); TG.start()
     print(f"Connecté: {mt5.account_info().login} | LIVE={STATE['live']}")
     TG.send("🤖 Agent MT5 en ligne\n" + status())
